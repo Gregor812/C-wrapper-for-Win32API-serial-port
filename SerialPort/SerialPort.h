@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <cinttypes>
+#include <string>
 
 #include "SerialPortExceptions.h"
 #include "SerialPortUtils.h"
@@ -41,17 +42,30 @@ namespace SerialInterfaces
                 m_isOpen = false;
                 /// unlock mutex
             }
-
         }
 
-        void Send() noexcept
+        void Send(std::string const& _data) noexcept
         {
-
+            if (m_isOpen)
+            {
+                DWORD sentBytes = 0;
+                
+                WriteFile(m_portHandle, _data.c_str(), _data.length(), &sentBytes, NULL);
+                Sleep(500);
+            }
         }
 
-        void Receive() noexcept
+        std::string Receive() noexcept
         {
+            if (m_isOpen)
+            {
+                DWORD receivedBytes = 0;
+                char buffer[128] = {};
 
+                ReadFile(m_portHandle, buffer, sizeof(buffer), &receivedBytes, NULL);
+
+                return std::string(buffer);
+            }
         }
 
         bool IsOpen() const noexcept
@@ -157,7 +171,7 @@ namespace SerialInterfaces
                 m_dcb.fOutxCtsFlow = FALSE;
                 m_dcb.fOutxDsrFlow = FALSE;
                 m_dcb.fParity = (m_parity != Parity::No);
-                m_dcb.fRtsControl = RTS_CONTROL_HANDSHAKE;
+                m_dcb.fRtsControl = RTS_CONTROL_ENABLE;
                 m_dcb.fTXContinueOnXoff = TRUE;
                 m_dcb.Parity = static_cast<uint8_t>(m_parity);
                 m_dcb.StopBits = static_cast<uint8_t>(m_stopBits);
