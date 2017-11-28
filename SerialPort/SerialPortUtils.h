@@ -5,6 +5,11 @@
 
 namespace SerialInterfaces
 {
+    enum class Mode : uint32_t
+    {
+        Sync = NULL,
+        Async = FILE_FLAG_OVERLAPPED
+    };
     enum class Baudrate : uint32_t
     {
         BR110 = CBR_110,
@@ -24,7 +29,7 @@ namespace SerialInterfaces
         BR256000 = CBR_256000
     };
 
-    enum class Parity : uint16_t
+    enum class Parity : uint8_t
     {
         Even = EVENPARITY,
         Mark = MARKPARITY,
@@ -35,10 +40,10 @@ namespace SerialInterfaces
 
     enum class DataBits : uint8_t
     {
-        Five = DATABITS_5,
-        Six = DATABITS_6,
-        Seven = DATABITS_7,
-        Eight = DATABITS_8
+        Five = 5,
+        Six = 6,
+        Seven = 7,
+        Eight = 8
     };
 
     enum class StopBits : uint8_t
@@ -46,5 +51,20 @@ namespace SerialInterfaces
         One = ONESTOPBIT,
         OneFive = ONE5STOPBITS,
         Two = TWOSTOPBITS
+    };
+
+    enum class DtrControl : uint8_t
+    {
+        Disable = DTR_CONTROL_DISABLE,
+        Enable = DTR_CONTROL_ENABLE,
+        Handshake = DTR_CONTROL_HANDSHAKE
+    };
+
+    enum class RtsControl : uint8_t
+    {
+        Disable = RTS_CONTROL_DISABLE,
+        Enable = RTS_CONTROL_ENABLE,
+        Handshake = RTS_CONTROL_HANDSHAKE,
+        Toggle = RTS_CONTROL_TOGGLE
     };
 }

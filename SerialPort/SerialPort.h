@@ -15,19 +15,45 @@ namespace SerialInterfaces
     public:
         SerialPort() noexcept = default;
 
-        void Open(uint16_t _portNumber, Baudrate _baudrate, Parity _parity, DataBits _dataBits, StopBits _stopBits) noexcept
+        void OpenSync(uint16_t _portNumber,
+                      Baudrate _baudrate = Baudrate::BR9600,
+                      Parity _parity = Parity::No,
+                      DataBits _dataBits = DataBits::Eight,
+                      StopBits _stopBits = StopBits::One,
+                      DtrControl _dtrControl = DtrControl::Enable,
+                      RtsControl _rtsControl = RtsControl::Enable) noexcept
         {
             if (m_isOpen == false)
             {
-                Open(false, _portNumber, _baudrate, _parity, _dataBits, _stopBits);
+                m_mode = Mode::Sync;
+                Open(_portNumber,
+                     _baudrate,
+                     _parity,
+                     _dataBits,
+                     _stopBits,
+                     _dtrControl,
+                     _rtsControl);
             }
         }
 
-        void OpenAsync(uint16_t _portNumber, Baudrate _baudrate, Parity _parity, DataBits _dataBits, StopBits _stopBits) noexcept
+        void OpenAsync(uint16_t _portNumber,
+                       Baudrate _baudrate = Baudrate::BR9600,
+                       Parity _parity = Parity::No,
+                       DataBits _dataBits = DataBits::Eight,
+                       StopBits _stopBits = StopBits::One,
+                       DtrControl _dtrControl = DtrControl::Enable,
+                       RtsControl _rtsControl = RtsControl::Enable) noexcept
         {
             if (m_isOpen == false)
             {
-                Open(true, _portNumber, _baudrate, _parity, _dataBits, _stopBits);
+                m_mode = Mode::Async;
+                Open(_portNumber,
+                     _baudrate,
+                     _parity,
+                     _dataBits,
+                     _stopBits,
+                     _dtrControl,
+                     _rtsControl);
             }
         }
 
@@ -49,8 +75,8 @@ namespace SerialInterfaces
             if (m_isOpen)
             {
                 DWORD sentBytes = 0;
-                
-                WriteFile(m_portHandle, _data.c_str(), _data.length(), &sentBytes, NULL);
+
+                WriteFile(m_portHandle, _data.c_str(), static_cast<DWORD>(_data.length()), &sentBytes, NULL);
                 Sleep(500);
             }
         }
@@ -66,6 +92,8 @@ namespace SerialInterfaces
 
                 return std::string(buffer);
             }
+            std::string empty;
+            return empty;
         }
 
         bool IsOpen() const noexcept
@@ -82,7 +110,13 @@ namespace SerialInterfaces
         /// =====================================================================================
         /// private methods
 
-        void Open(bool _async, uint16_t _portNumber, Baudrate _baudrate, Parity _parity, DataBits _dataBits, StopBits _stopBits) noexcept
+        void Open(uint16_t _portNumber,
+                  Baudrate _baudrate,
+                  Parity _parity,
+                  DataBits _dataBits,
+                  StopBits _stopBits,
+                  DtrControl _dtrControl,
+                  RtsControl _rtsControl) noexcept
         {
             m_portNumber = _portNumber;
             m_baudrate = _baudrate;
@@ -90,7 +124,7 @@ namespace SerialInterfaces
             m_dataBits = _dataBits;
 
             /// lock mutex
-            m_portHandle = GetHandle(_async);
+            m_portHandle = GetHandle();
 
             if (m_portHandle == INVALID_HANDLE_VALUE)
             {
@@ -124,21 +158,19 @@ namespace SerialInterfaces
             /// unlock mutex
         }
 
-        HANDLE GetHandle(bool _async) noexcept
+        HANDLE GetHandle() noexcept
         {
             if (m_portHandle == INVALID_HANDLE_VALUE)
             {
                 TCHAR tempString[1024] = {};
                 wsprintf(tempString, _T("\\\\.\\COM%d"), m_portNumber);
 
-                DWORD fileFlag = _async ? FILE_FLAG_OVERLAPPED : NULL;
-
                 return CreateFile(tempString,
                                   GENERIC_READ | GENERIC_WRITE,
                                   NULL,
                                   NULL,
                                   OPEN_EXISTING,
-                                  fileFlag,
+                                  static_cast<uint32_t>(m_mode),
                                   NULL);
             }
 
@@ -162,7 +194,7 @@ namespace SerialInterfaces
                 m_dcb.fAbortOnError = FALSE;
                 m_dcb.fBinary = TRUE;
                 m_dcb.fDsrSensitivity = FALSE;
-                m_dcb.fDtrControl = DTR_CONTROL_DISABLE;
+                m_dcb.fDtrControl = static_cast<uint8_t>(m_dtrControl);
                 m_dcb.fDummy2 = 0;
                 m_dcb.fErrorChar = FALSE;
                 m_dcb.fInX = FALSE;
@@ -171,7 +203,7 @@ namespace SerialInterfaces
                 m_dcb.fOutxCtsFlow = FALSE;
                 m_dcb.fOutxDsrFlow = FALSE;
                 m_dcb.fParity = (m_parity != Parity::No);
-                m_dcb.fRtsControl = RTS_CONTROL_ENABLE;
+                m_dcb.fRtsControl = static_cast<uint8_t>(m_rtsControl);
                 m_dcb.fTXContinueOnXoff = TRUE;
                 m_dcb.Parity = static_cast<uint8_t>(m_parity);
                 m_dcb.StopBits = static_cast<uint8_t>(m_stopBits);
@@ -204,6 +236,8 @@ namespace SerialInterfaces
 
         HANDLE m_portHandle = INVALID_HANDLE_VALUE;
         bool m_isOpen = false;
+        Mode m_mode = Mode::Sync;
+
         DCB m_dcb;
         COMMTIMEOUTS m_commTimeouts;
 
@@ -212,5 +246,7 @@ namespace SerialInterfaces
         Parity m_parity = Parity::No;
         DataBits m_dataBits = DataBits::Eight;
         StopBits m_stopBits = StopBits::One;
+        DtrControl m_dtrControl = DtrControl::Enable;
+        RtsControl m_rtsControl = RtsControl::Enable;
     };
 }
