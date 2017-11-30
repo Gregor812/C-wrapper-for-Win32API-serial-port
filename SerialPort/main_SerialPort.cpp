@@ -25,13 +25,19 @@ int main()
         if (!std::cin.get(currentChar))
             break;
 
+        if (currentChar == '\n')
+            continue;
+
         if (currentChar == '\\')
         {
             if (!std::cin.get(currentChar))
                 break;
 
             if (currentChar == 'n')
+            {
+                textToSend += '\n';
                 continue;
+            }
             else if (currentChar == 'r')
             {
                 textToSend += '\r';

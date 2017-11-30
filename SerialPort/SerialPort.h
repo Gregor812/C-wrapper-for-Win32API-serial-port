@@ -122,6 +122,9 @@ namespace SerialInterfaces
             m_baudrate = _baudrate;
             m_parity = _parity;
             m_dataBits = _dataBits;
+            m_stopBits = _stopBits;
+            m_dtrControl = _dtrControl;
+            m_rtsControl = _rtsControl;
 
             /// lock mutex
             m_portHandle = GetHandle();
@@ -177,7 +180,7 @@ namespace SerialInterfaces
             return m_portHandle;
         }
 
-        void ConfigureDCB() noexcept
+        bool ConfigureDCB() noexcept
         {
             memset(&m_dcb, 0, sizeof(DCB));
             m_dcb.DCBlength = sizeof(DCB);
@@ -217,18 +220,35 @@ namespace SerialInterfaces
             else
             {
                 Close();
-                return;
+                return false;
             }
 
             wasNoErrors = SetCommState(m_portHandle, &m_dcb);
 
             if (wasNoErrors == false)
+            {
                 Close();
+                return false;
+            }
+            return true;
         }
 
-        void ConfigureTimeouts() noexcept
+        bool ConfigureTimeouts() noexcept
         {
+            bool wasNoErrors = GetCommTimeouts(m_portHandle, &m_commTimeouts);
 
+            if (wasNoErrors)
+            {
+                m_commTimeouts.ReadIntervalTimeout = 100;
+                m_commTimeouts.ReadTotalTimeoutMultiplier = 2;
+                m_commTimeouts.ReadTotalTimeoutConstant = 200;
+                m_commTimeouts.WriteTotalTimeoutMultiplier = 2;
+                m_commTimeouts.WriteTotalTimeoutConstant = 200;
+            }
+
+            wasNoErrors = SetCommTimeouts(m_portHandle, &m_commTimeouts);
+
+            return wasNoErrors;
         }
 
         /// ===========================================
@@ -236,17 +256,20 @@ namespace SerialInterfaces
 
         HANDLE m_portHandle = INVALID_HANDLE_VALUE;
         bool m_isOpen = false;
-        Mode m_mode = Mode::Sync;
+        Mode m_mode;
 
         DCB m_dcb;
         COMMTIMEOUTS m_commTimeouts;
+        COMSTAT m_comStat;
+        COMMPROP m_commProp;
+        COMMCONFIG m_commConfig;
 
-        uint16_t m_portNumber = 0;
-        Baudrate m_baudrate = Baudrate::BR9600;
-        Parity m_parity = Parity::No;
-        DataBits m_dataBits = DataBits::Eight;
-        StopBits m_stopBits = StopBits::One;
-        DtrControl m_dtrControl = DtrControl::Enable;
-        RtsControl m_rtsControl = RtsControl::Enable;
+        uint16_t m_portNumber;
+        Baudrate m_baudrate;
+        Parity m_parity;
+        DataBits m_dataBits;
+        StopBits m_stopBits;
+        DtrControl m_dtrControl;
+        RtsControl m_rtsControl;
     };
 }
